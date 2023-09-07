@@ -2,6 +2,10 @@
 using ResultArchiver.Classes;
 using ResultArchiver.Settings;
 using System.IO.Compression;
+using System;
+using System.Runtime.InteropServices;
+using static System.Net.Mime.MediaTypeNames;
+using System.Diagnostics;
 
 namespace ResultArchiver
 {
@@ -10,9 +14,28 @@ namespace ResultArchiver
         private static readonly FileSystemWatcher _watcher = new FileSystemWatcher();
         public static SettingsJDO _settings { get; set; } = new SettingsJDO();
 
+        private const int MF_BYCOMMAND = 0x00000000;
+        public const int SC_CLOSE = 0xF060;
+
+        [DllImport("user32.dll")]
+        public static extern int DeleteMenu(IntPtr hMenu, int nPosition, int wFlags);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetSystemMenu(IntPtr hWnd, bool bRevert);
+
+        [DllImport("kernel32.dll", ExactSpelling = true)]
+        private static extern IntPtr GetConsoleWindow();
+
         static void Main(string[] args)
         {
             bool CloseApp = false;
+
+            DeleteMenu(GetSystemMenu(GetConsoleWindow(), false), SC_CLOSE, MF_BYCOMMAND);
+
+            // disable ctr + C
+            Console.CancelKeyPress += delegate (object? sender, ConsoleCancelEventArgs e) {
+                e.Cancel = true;
+            };
 
             ShowInfo();
 
