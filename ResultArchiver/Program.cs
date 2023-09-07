@@ -14,6 +14,8 @@ namespace ResultArchiver
         private static readonly FileSystemWatcher _watcher = new FileSystemWatcher();
         public static SettingsJDO _settings { get; set; } = new SettingsJDO();
 
+        #region user32.dll import
+
         private const int MF_BYCOMMAND = 0x00000000;
         public const int SC_CLOSE = 0xF060;
 
@@ -26,16 +28,13 @@ namespace ResultArchiver
         [DllImport("kernel32.dll", ExactSpelling = true)]
         private static extern IntPtr GetConsoleWindow();
 
+        #endregion
+
         static void Main(string[] args)
         {
             bool CloseApp = false;
 
-            DeleteMenu(GetSystemMenu(GetConsoleWindow(), false), SC_CLOSE, MF_BYCOMMAND);
-
-            // disable ctr + C
-            Console.CancelKeyPress += delegate (object? sender, ConsoleCancelEventArgs e) {
-                e.Cancel = true;
-            };
+            DisableCloseAppFunction();
 
             ShowInfo();
 
@@ -73,6 +72,16 @@ namespace ResultArchiver
             {
                 DeleteOriginalFileFile(e, destinationPath);
             }
+        }
+
+        private static void DisableCloseAppFunction()
+        {
+            DeleteMenu(GetSystemMenu(GetConsoleWindow(), false), SC_CLOSE, MF_BYCOMMAND);
+
+            // Disable CTRL + C
+            Console.CancelKeyPress += delegate (object? sender, ConsoleCancelEventArgs e) {
+                e.Cancel = true;
+            };
         }
 
         private static void DeleteOriginalFileFile(FileSystemEventArgs e, string destinationPath)
