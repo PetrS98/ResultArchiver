@@ -2,10 +2,7 @@
 using ResultArchiver.Classes;
 using ResultArchiver.Settings;
 using System.IO.Compression;
-using System;
 using System.Runtime.InteropServices;
-using static System.Net.Mime.MediaTypeNames;
-using System.Diagnostics;
 
 namespace ResultArchiver
 {
