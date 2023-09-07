@@ -7,6 +7,7 @@ namespace ResultArchiver
 {
     internal class Program
     {
+        private static readonly FileSystemWatcher _watcher = new FileSystemWatcher();
         public static SettingsJDO _settings { get; set; } = new SettingsJDO();
 
         static void Main(string[] args)
@@ -19,7 +20,7 @@ namespace ResultArchiver
 
             CheckSettings(_settings);
 
-            SetupWatcher(_settings.FileFoldeCheckerSettings);
+            SetupWatcher(_settings.FileFoldeCheckerSettings, _watcher);
 
             while (CloseApp == false)
             {
@@ -103,13 +104,13 @@ namespace ResultArchiver
             Console.WriteLine("Result Archiver Application STARTED.");
         }
 
-        private static void SetupWatcher(FileFoldeCheckerSettingsJDO settings)
+        private static void SetupWatcher(FileFoldeCheckerSettingsJDO settings, FileSystemWatcher watcher)
         {
             Console.WriteLine("Setuping File/Folder Change Watcher");
 
             try
             {
-                using var watcher = new FileSystemWatcher(settings.Path);
+                watcher = new FileSystemWatcher(settings.Path);
 
                 watcher.NotifyFilter = NotifyFilters.FileName;
 
@@ -153,6 +154,11 @@ namespace ResultArchiver
             }
 
             if (Directory.Exists(settings!.DestinationPath) == false)
+            {
+                error = true;
+            }
+
+            if (settings.FileFoldeCheckerSettings.Extension == "")
             {
                 error = true;
             }
