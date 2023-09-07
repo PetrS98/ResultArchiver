@@ -23,5 +23,7 @@ namespace ResultArchiver.Classes
                                                       + "+-----------------------------------+------------------------------------+\r\n";
 
         public static readonly string SETTINGS_PATH = "settings.json";
+
+        public static readonly string APPLICATION_NAME = "Nexen Tire - Result Archiver V 1.0.0";
     }
 }

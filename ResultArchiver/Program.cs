@@ -9,7 +9,7 @@ namespace ResultArchiver
     internal class Program
     {
         private static readonly FileSystemWatcher _watcher = new FileSystemWatcher();
-        public static SettingsJDO _settings { get; set; } = new SettingsJDO();
+        private static SettingsJDO _settings { get; set; } = new SettingsJDO();
 
         #region user32.dll import
 
@@ -32,6 +32,8 @@ namespace ResultArchiver
             bool CloseApp = false;
 
             DisableCloseAppFunction();
+
+            Console.Title = Constants.APPLICATION_NAME;
 
             ShowInfo();
 
@@ -57,17 +59,31 @@ namespace ResultArchiver
 
         private static void OnCreated(object sender, FileSystemEventArgs e)
         {
+            ConsoleWriteLine("", default);
             ConsoleWriteLine("New File Created: " + e.FullPath, ConsoleColor.Blue);
 
             string destinationPath = Path.ChangeExtension(_settings.DestinationPath + @"\\" + Path.GetFileName(e.FullPath), ".zip");
 
             Thread.Sleep(1000);
 
-            bool archiveFileError = ArchiveFile(e, destinationPath);
-
-            if (_settings.DeleteResultAfterArchivate && archiveFileError == false)
+            if (File.Exists(destinationPath))
             {
-                DeleteOriginalFileFile(e, destinationPath);
+                ConsoleWriteLine("Archive file already exist. Path: " + destinationPath, ConsoleColor.DarkYellow);
+                ConsoleWriteLine("Archiving file is skipped.", ConsoleColor.DarkYellow);
+
+                if (_settings.DeleteResultAfterArchivate)
+                {
+                    DeleteFile(e.FullPath);
+                }
+            }
+            else
+            {
+                bool archiveFileError = ArchiveFile(e, destinationPath);
+
+                if (_settings.DeleteResultAfterArchivate && archiveFileError == false)
+                {
+                    DeleteOriginalFileFile(e, destinationPath);
+                }
             }
         }
 
@@ -92,11 +108,11 @@ namespace ResultArchiver
         {
             try
             {
-                ConsoleWriteLine("Check if Archive exist.", ConsoleColor.Blue);
+                ConsoleWriteLine("Check if new archive exist.", ConsoleColor.Blue);
 
                 if (File.Exists(destinationPath))
                 {
-                    ConsoleWriteLine("Archive exist. Deleting original file. Path: " + e.FullPath, ConsoleColor.Blue);
+                    ConsoleWriteLine("New archive exist. Deleting original file. Path: " + e.FullPath, ConsoleColor.Blue);
                     File.Delete(e.FullPath);
                 }
 
@@ -106,6 +122,22 @@ namespace ResultArchiver
             catch (Exception ex)
             {
                 ConsoleWriteLine("Error while checking or deleting file: " + ex.Message, ConsoleColor.Red);
+            }
+        }
+
+        private static void DeleteFile(string path)
+        {
+            try 
+            {
+                ConsoleWriteLine("Deleting duplicit file. Path: " + path, ConsoleColor.Blue);
+
+                File.Delete(path);
+
+                ConsoleWriteLine("Deleting duplicit file DONE.", ConsoleColor.Green);
+            }
+            catch (Exception ex)
+            {
+                ConsoleWriteLine("Deleting duplicit file ERROR: " + ex.Message, ConsoleColor.Red);
             }
         }
 
