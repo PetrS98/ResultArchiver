@@ -57,7 +57,7 @@ namespace ResultArchiver
 
         private static void OnCreated(object sender, FileSystemEventArgs e)
         {
-            Console.WriteLine("New File Created: " + e.FullPath);
+            ConsoleWriteLine("New File Created: " + e.FullPath, ConsoleColor.Blue);
 
             string destinationPath = Path.ChangeExtension(_settings.DestinationPath + @"\\" + Path.GetFileName(e.FullPath), ".zip");
 
@@ -69,6 +69,13 @@ namespace ResultArchiver
             {
                 DeleteOriginalFileFile(e, destinationPath);
             }
+        }
+
+        private static void ConsoleWriteLine(string text, ConsoleColor textColor)
+        {
+            Console.ForegroundColor = textColor;
+            Console.WriteLine(text);
+            Console.ForegroundColor = ConsoleColor.White;
         }
 
         private static void DisableCloseAppFunction()
@@ -85,19 +92,20 @@ namespace ResultArchiver
         {
             try
             {
-                Console.WriteLine("Check if Archive exist.");
+                ConsoleWriteLine("Check if Archive exist.", ConsoleColor.Blue);
 
                 if (File.Exists(destinationPath))
                 {
-                    Console.WriteLine("Archive exist. Deleting original file. Path: " + e.FullPath);
+                    ConsoleWriteLine("Archive exist. Deleting original file. Path: " + e.FullPath, ConsoleColor.Blue);
                     File.Delete(e.FullPath);
                 }
 
-                Console.WriteLine("Deleting DONE.");
+                ConsoleWriteLine("Deleting DONE.", ConsoleColor.Green);
+
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error while checking or deleting file: " + ex.Message);
+                ConsoleWriteLine("Error while checking or deleting file: " + ex.Message, ConsoleColor.Red);
             }
         }
 
@@ -107,19 +115,19 @@ namespace ResultArchiver
 
             try
             {
-                Console.WriteLine("Archivate file: " + e.Name);
+                ConsoleWriteLine("Archivate file: " + e.Name, ConsoleColor.Blue);
 
                 using (ZipArchive archive = ZipFile.Open(destinationPath, ZipArchiveMode.Create))
                 {
                     archive.CreateEntryFromFile(e.FullPath, Path.GetFileName(e.FullPath));
                 }
 
-                Console.WriteLine("Archiving DONE. Archive Path: " + destinationPath);
+                ConsoleWriteLine("Archiving DONE. Archive Path: " + destinationPath, ConsoleColor.Green);
             }
             catch (Exception ex)
             {
                 error = true;
-                Console.WriteLine("Archiving FAILED. Error: " + ex.Message);
+                ConsoleWriteLine("Archiving FAILED. Error: " + ex.Message, ConsoleColor.Red);
             }
 
             return error;
@@ -127,15 +135,15 @@ namespace ResultArchiver
 
         private static void ShowInfo()
         {
-            Console.WriteLine(Constants.CONSOLE_APP_NAME_TEXT);
-            Console.WriteLine(Constants.ABOUT_APP_TABLE);
-            Console.WriteLine("");
-            Console.WriteLine("Result Archiver Application STARTED.");
+            ConsoleWriteLine(Constants.CONSOLE_APP_NAME_TEXT, ConsoleColor.DarkMagenta);
+            ConsoleWriteLine(Constants.ABOUT_APP_TABLE, ConsoleColor.DarkMagenta);
+            ConsoleWriteLine("", default);
+            ConsoleWriteLine("Result Archiver Application STARTED.", ConsoleColor.Blue);
         }
 
         private static void SetupWatcher(FileFoldeCheckerSettingsJDO settings, FileSystemWatcher watcher)
         {
-            Console.WriteLine("Setuping File/Folder Change Watcher");
+            ConsoleWriteLine("Setuping File/Folder Change Watcher", ConsoleColor.Blue);
 
             try
             {
@@ -149,11 +157,11 @@ namespace ResultArchiver
                 watcher.IncludeSubdirectories = settings.IncludeSubdirectories;
                 watcher.EnableRaisingEvents = true;
 
-                Console.WriteLine("Setuping File/Folder Change Watcher DONE");
+                ConsoleWriteLine("Setuping File/Folder Change Watcher DONE", ConsoleColor.Green);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Setuping File/Folder Change Watcher ERROR: " + ex.Message);
+                ConsoleWriteLine("Setuping File/Folder Change Watcher ERROR: " + ex.Message, ConsoleColor.Red);
             }
         }
 
@@ -173,7 +181,7 @@ namespace ResultArchiver
 
         private static void CheckSettings(SettingsJDO settings)
         {
-            Console.WriteLine("Check Configuration");
+            ConsoleWriteLine("Check Configuration", ConsoleColor.Blue);
 
             bool error = false;
 
@@ -194,17 +202,17 @@ namespace ResultArchiver
 
             if (error)
             {
-                Console.WriteLine("CONFIG ERROR. CLOSING APPLICATION");
+                ConsoleWriteLine("CONFIG ERROR. CLOSING APPLICATION", ConsoleColor.Red);
                 Thread.Sleep(5000);
                 Environment.Exit(1);
             }
 
-            Console.WriteLine("Configuration is OK");
+            ConsoleWriteLine("Configuration is OK", ConsoleColor.Green);
         }
 
         private static SettingsJDO ReadSettingsJSON(string path)
         {
-            Console.WriteLine("Read Configuration File from: " + GetApplicationFolder() + "\\" + path);
+            ConsoleWriteLine("Read Configuration File from: " + GetApplicationFolder() + "\\" + path, ConsoleColor.Blue);
 
             SettingsJDO? _settings = null;
 
@@ -218,7 +226,8 @@ namespace ResultArchiver
             {
                 _settings = new();
                 File.WriteAllText(path, JsonConvert.SerializeObject(_settings, Formatting.Indented));
-                Console.WriteLine("Read Configuration File FAILED. Created default configuration file.");
+
+                ConsoleWriteLine("Read Configuration File FAILED. Created default configuration file.", ConsoleColor.Red);
             }
 
             return _settings;
