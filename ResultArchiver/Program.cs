@@ -3,6 +3,7 @@ using ResultArchiver.Classes;
 using ResultArchiver.Settings;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using Serilog;
 
 namespace ResultArchiver
 {
@@ -10,6 +11,10 @@ namespace ResultArchiver
     {
         private static readonly FileSystemWatcher _watcher = new FileSystemWatcher();
         private static SettingsJDO _settings { get; set; } = new SettingsJDO();
+
+        private static ILogger Logger = new LoggerConfiguration()
+                .WriteTo.File(path: Constants.LOG_PATH, retainedFileCountLimit: 10, rollingInterval: RollingInterval.Day)
+                .CreateLogger();
 
         #region user32.dll import
 
@@ -39,6 +44,8 @@ namespace ResultArchiver
 
             _settings = ReadSettingsJSON(Constants.SETTINGS_PATH);
 
+            
+
             CheckSettings(_settings);
 
             SetupWatcher(_settings.FileFoldeCheckerSettings, _watcher);
@@ -59,38 +66,220 @@ namespace ResultArchiver
 
         private static void OnCreated(object sender, FileSystemEventArgs e)
         {
-            ConsoleWriteLine("", default);
+            ConsoleWriteLine("", default, false);
             ConsoleWriteLine("New File Created: " + e.FullPath, ConsoleColor.Blue);
 
             string destinationPath = Path.ChangeExtension(_settings.DestinationPath + @"\\" + Path.GetFileName(e.FullPath), ".zip");
 
+            DeleteOldestFileIfAmountBiggerThenSet(_settings);
+
             Thread.Sleep(1000);
 
-            if (File.Exists(destinationPath))
+            if (CheckIfDriveFreeSpaceForFileIsOK(_settings, e.FullPath))
             {
-                ConsoleWriteLine("Archive file already exist. Path: " + destinationPath, ConsoleColor.DarkYellow);
-                ConsoleWriteLine("Archiving file is skipped.", ConsoleColor.DarkYellow);
-
-                if (_settings.DeleteResultAfterArchivate)
+                if (File.Exists(destinationPath))
                 {
-                    DeleteFile(e.FullPath);
+                    ConsoleWriteLine("Archive file already exist. Path: " + destinationPath, ConsoleColor.DarkYellow);
+                    ConsoleWriteLine("Archiving file is skipped.", ConsoleColor.DarkYellow);
+
+                    if (_settings.DeleteResultAfterArchivate)
+                    {
+                        DeleteFile(e.FullPath);
+                    }
                 }
-            }
-            else
-            {
-                bool archiveFileError = ArchiveFile(e, destinationPath);
-
-                if (_settings.DeleteResultAfterArchivate && archiveFileError == false)
+                else
                 {
-                    DeleteOriginalFileFile(e, destinationPath);
+                    bool archiveFileError = ArchiveFile(e, destinationPath);
+
+                    if (_settings.DeleteResultAfterArchivate && archiveFileError == false)
+                    {
+                        DeleteOriginalFileFile(e, destinationPath);
+                    }
                 }
             }
         }
 
-        private static void ConsoleWriteLine(string text, ConsoleColor textColor)
+        private static bool CheckIfDriveFreeSpaceForFileIsOK(SettingsJDO settings, string filePath)
+        {
+            long driveFreeSpace = 0;
+
+            ConsoleWriteLine("Check if drive exist", ConsoleColor.Blue);
+
+            if (Directory.Exists(settings.DestinationPath)) 
+            {
+                ConsoleWriteLine("Drive exist", ConsoleColor.Green);
+
+                string pathRoot = Path.GetPathRoot(_settings.DestinationPath)!;
+
+                ConsoleWriteLine("Getting free space on drive. Drive: " + pathRoot, ConsoleColor.Blue);
+
+                driveFreeSpace = GetTotalDriveFreeSpace(pathRoot);
+
+                ConsoleWriteLine("Free space on drive is: " + SizeSuffix(driveFreeSpace, 2), ConsoleColor.Green);
+                ConsoleWriteLine("Getting new file size.", ConsoleColor.Blue);
+
+                long fileSize = GetFileSize(filePath);
+                long minFreeSpaceSize = fileSize + 5368709120;
+
+                ConsoleWriteLine("New file size is: " + SizeSuffix(fileSize, 2), ConsoleColor.Green);
+                ConsoleWriteLine("Min free space on drive is: " + SizeSuffix(minFreeSpaceSize, 2), ConsoleColor.Green);
+                ConsoleWriteLine("Checking if free space is sufficient for new file.", ConsoleColor.Blue);
+
+                if (driveFreeSpace >= minFreeSpaceSize) 
+                {
+                    ConsoleWriteLine("Free space is sufficient for new file.", ConsoleColor.Green);
+                    return true;
+                }
+                else
+                {
+                    ConsoleWriteLine("Free space is NOT sufficient for new file.", ConsoleColor.DarkYellow);
+                    ConsoleWriteLine("All next action is skipped", ConsoleColor.Blue);
+                }
+            }
+            else
+            {
+                ConsoleWriteLine("Drive NOT exist", ConsoleColor.Red);
+            }
+
+            return false;
+        }
+
+        private static string SizeSuffix(Int64 value, int decimalPlaces = 1)
+        {
+            if (decimalPlaces < 0) { throw new ArgumentOutOfRangeException("decimalPlaces"); }
+            if (value < 0) { return "-" + SizeSuffix(-value, decimalPlaces); }
+            if (value == 0) { return string.Format("{0:n" + decimalPlaces + "} bytes", 0); }
+
+            int mag = (int)Math.Log(value, 1024);
+            decimal adjustedSize = (decimal)value / (1L << (mag * 10));
+
+            if (Math.Round(adjustedSize, decimalPlaces) >= 1000)
+            {
+                mag += 1;
+                adjustedSize /= 1024;
+            }
+
+            return string.Format("{0:n" + decimalPlaces + "} {1}",
+                adjustedSize,
+                Constants.SIZE_SUFFIXIES[mag]);
+        }
+
+        private static long GetTotalDriveFreeSpace(string driveName)
+        {
+            foreach (DriveInfo drive in DriveInfo.GetDrives())
+            {
+                if (drive.IsReady && drive.Name == driveName)
+                {
+                    return drive.TotalFreeSpace;
+                }
+            }
+            return -1;
+        }
+
+        private static void DeleteOldestFileIfAmountBiggerThenSet(SettingsJDO settings)
+        {
+            if (Directory.Exists(settings.DestinationPath))
+            {
+                ConsoleWriteLine("", default, false);
+                ConsoleWriteLine("Checking amounth of file in destination folder", ConsoleColor.Blue);
+
+                int amountOfFile = CheckAmountOfArchiveFile(settings.DestinationPath);
+
+                ConsoleWriteLine("Amounth of file is: " + amountOfFile.ToString(), ConsoleColor.Blue);
+
+                if (amountOfFile >= settings.MaxAmountOfArchiveFileInFolder)
+                {
+                    ConsoleWriteLine("Amounth of file is bigger or equal then set. Set is: " + settings.MaxAmountOfArchiveFileInFolder.ToString(), ConsoleColor.Blue);
+                    ConsoleWriteLine("Deleting all file above set value. Set is: " + settings.MaxAmountOfArchiveFileInFolder.ToString(), ConsoleColor.Blue);
+
+                    for (int i = settings.MaxAmountOfArchiveFileInFolder - 1; i < amountOfFile; i++)
+                    {
+                        ConsoleWriteLine("Getting oldest file path.", ConsoleColor.Blue);
+
+                        string oldestFilePath = GetOldestFileFromDirectory(".zip", settings.DestinationPath);
+
+                        ConsoleWriteLine("Oldest file path is: " + oldestFilePath, ConsoleColor.Green);
+                        ConsoleWriteLine("Deleting oldest file.", ConsoleColor.Blue);
+
+                        if (File.Exists(oldestFilePath))
+                        {
+                            File.Delete(oldestFilePath);
+                            ConsoleWriteLine("Oldest file deleted.", ConsoleColor.Green);
+                        }
+                        else
+                        {
+                            ConsoleWriteLine("Oldest file deleting ERROR: File not exist.", ConsoleColor.Red);
+                        }
+                    }
+                }
+
+                ConsoleWriteLine("", default, false);
+            }
+        }
+
+        private static long GetFileSize(string path)
+        {
+            return new FileInfo(path).Length;
+        }
+
+        private static int CheckAmountOfArchiveFile(string path)
+        {
+            try
+            {
+                string[] files = files = Directory.GetFiles(path, "*.zip");
+                return files.Length;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private static string GetOldestFileFromDirectory(string extension, string path)
+        {
+            return new DirectoryInfo(path).GetFiles("*" + extension).MinBy(o => o.CreationTime)!.FullName;
+        }
+
+        private static void ConsoleWriteLine(string text, ConsoleColor textColor, bool addPrefixTime = true)
         {
             Console.ForegroundColor = textColor;
-            Console.WriteLine(text);
+
+            switch (textColor)
+            {
+                case ConsoleColor.DarkRed:
+                    Logger.Error(text);
+                    break;
+                case ConsoleColor.DarkYellow:
+                    Logger.Warning(text);
+                    break;
+                case ConsoleColor.Red:
+                    Logger.Error(text);
+                    break;
+                case ConsoleColor.Yellow:
+                    Logger.Warning(text);
+                    break;
+                default:
+                    if (_settings.EnableLoging)
+                    {
+                        Logger.Information(text);
+                    }
+                    break;
+            }
+
+            string tmp_text;
+
+            if (addPrefixTime)
+            {
+                DateTime dateTime = DateTime.Now;
+                tmp_text = $"<{dateTime.ToString("G")}> {text}";
+            }
+            else
+            {
+                tmp_text = text;
+            }
+
+            Console.WriteLine(tmp_text);
+
             Console.ForegroundColor = ConsoleColor.White;
         }
 
@@ -167,9 +356,9 @@ namespace ResultArchiver
 
         private static void ShowInfo()
         {
-            ConsoleWriteLine(Constants.CONSOLE_APP_NAME_TEXT, ConsoleColor.DarkMagenta);
-            ConsoleWriteLine(Constants.ABOUT_APP_TABLE, ConsoleColor.DarkMagenta);
-            ConsoleWriteLine("", default);
+            ConsoleWriteLine(Constants.CONSOLE_APP_NAME_TEXT, ConsoleColor.DarkMagenta, false);
+            ConsoleWriteLine(Constants.ABOUT_APP_TABLE, ConsoleColor.DarkMagenta, false);
+            ConsoleWriteLine("", default, false);
             ConsoleWriteLine("Result Archiver Application STARTED.", ConsoleColor.Blue);
         }
 
