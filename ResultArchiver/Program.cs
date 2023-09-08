@@ -89,7 +89,7 @@ namespace ResultArchiver
                 }
                 else
                 {
-                    bool archiveFileError = ArchiveFile(e, destinationPath);
+                    bool archiveFileError = ArchiveFile(e, destinationPath, _settings.CompressionLevel);
 
                     if (_settings.DeleteResultAfterArchivate && archiveFileError == false)
                     {
@@ -330,7 +330,7 @@ namespace ResultArchiver
             }
         }
 
-        private static bool ArchiveFile(FileSystemEventArgs e, string destinationPath)
+        private static bool ArchiveFile(FileSystemEventArgs e, string destinationPath, CompressionLevel compressionLevel = CompressionLevel.Optimal)
         {
             bool error = false;
 
@@ -340,7 +340,7 @@ namespace ResultArchiver
 
                 using (ZipArchive archive = ZipFile.Open(destinationPath, ZipArchiveMode.Create))
                 {
-                    archive.CreateEntryFromFile(e.FullPath, Path.GetFileName(e.FullPath));
+                    archive.CreateEntryFromFile(e.FullPath, Path.GetFileName(e.FullPath), compressionLevel);
                 }
 
                 ConsoleWriteLine("Archiving DONE. Archive Path: " + destinationPath, ConsoleColor.Green);
