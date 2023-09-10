@@ -44,9 +44,9 @@ namespace ResultArchiver
 
             _settings = ReadSettingsJSON(Constants.SETTINGS_PATH);
 
-            
-
             CheckSettings(_settings);
+
+            ShowFileFilterInformation(_settings);
 
             SetupWatcher(_settings.FileFoldeCheckerSettings, _watcher);
 
@@ -66,6 +66,14 @@ namespace ResultArchiver
 
         private static void OnCreated(object sender, FileSystemEventArgs e)
         {
+            foreach (string item in _settings.FileIgnoreFilter)
+            {
+                if ((item + _settings.FileFoldeCheckerSettings.Extension) == e.Name)
+                {
+                    return;
+                }
+            }
+
             ConsoleWriteLine("", default, false);
             ConsoleWriteLine("New File Created: " + e.FullPath, ConsoleColor.Blue);
 
@@ -95,6 +103,22 @@ namespace ResultArchiver
                     {
                         DeleteOriginalFileFile(e, destinationPath);
                     }
+                }
+            }
+        }
+
+        private static void ShowFileFilterInformation(SettingsJDO settings)
+        {
+            int fileIgnoreFilterCount = settings.FileIgnoreFilter.Count;
+
+            if (fileIgnoreFilterCount > 0)
+            {
+                ConsoleWriteLine("", default, false);
+                ConsoleWriteLine("File filter is Active. Amount of items in filter is: " + fileIgnoreFilterCount.ToString(), ConsoleColor.Blue);
+
+                foreach (string item in settings.FileIgnoreFilter)
+                {
+                    ConsoleWriteLine("No operations will be performed on the following file. File Name: " + item.ToString(), ConsoleColor.Blue);
                 }
             }
         }
@@ -360,10 +384,12 @@ namespace ResultArchiver
             ConsoleWriteLine(Constants.ABOUT_APP_TABLE, ConsoleColor.DarkMagenta, false);
             ConsoleWriteLine("", default, false);
             ConsoleWriteLine("Result Archiver Application STARTED.", ConsoleColor.Blue);
+            ConsoleWriteLine("", default, false);
         }
 
         private static void SetupWatcher(FileFoldeCheckerSettingsJDO settings, FileSystemWatcher watcher)
         {
+            ConsoleWriteLine("", default, false);
             ConsoleWriteLine("Setuping File/Folder Change Watcher", ConsoleColor.Blue);
 
             try
