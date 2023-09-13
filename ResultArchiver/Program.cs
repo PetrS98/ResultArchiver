@@ -399,6 +399,7 @@ namespace ResultArchiver
                 watcher.NotifyFilter = NotifyFilters.FileName;
 
                 watcher.Created += OnCreated;
+                watcher.Error += Watcher_Error;
 
                 watcher.Filter = "*" + settings.Extension;
                 watcher.IncludeSubdirectories = settings.IncludeSubdirectories;
@@ -410,6 +411,12 @@ namespace ResultArchiver
             {
                 ConsoleWriteLine("Setuping File/Folder Change Watcher ERROR: " + ex.Message, ConsoleColor.Red);
             }
+        }
+
+        private static void Watcher_Error(object sender, ErrorEventArgs e)
+        {
+            ConsoleWriteLine("", default, false);
+            ConsoleWriteLine("Watcher ERROR: " + e.GetException().Message, ConsoleColor.Red);
         }
 
         private static string GetApplicationFolder()
