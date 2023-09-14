@@ -9,7 +9,7 @@ namespace ResultArchiver
 {
     internal class Program
     {
-        private static readonly FileSystemWatcher _watcher = new FileSystemWatcher();
+        private static FileSystemWatcher _watcher;
         private static SettingsJDO _settings { get; set; } = new SettingsJDO();
 
         private static ILogger Logger = new LoggerConfiguration()
@@ -48,7 +48,7 @@ namespace ResultArchiver
 
             ShowFileFilterInformation(_settings);
 
-            SetupWatcher(_settings.FileFoldeCheckerSettings, _watcher);
+            _watcher = CreateWatcher(_settings.FileFoldeCheckerSettings);
 
             while (CloseApp == false)
             {
@@ -387,14 +387,14 @@ namespace ResultArchiver
             ConsoleWriteLine("", default, false);
         }
 
-        private static void SetupWatcher(FileFoldeCheckerSettingsJDO settings, FileSystemWatcher watcher)
+        private static FileSystemWatcher CreateWatcher(FileFoldeCheckerSettingsJDO settings)
         {
             ConsoleWriteLine("", default, false);
             ConsoleWriteLine("Setuping File/Folder Change Watcher", ConsoleColor.Blue);
 
             try
             {
-                watcher = new FileSystemWatcher(settings.Path);
+                var watcher = new FileSystemWatcher(settings.Path);
 
                 watcher.NotifyFilter = NotifyFilters.FileName;
 
@@ -405,13 +405,14 @@ namespace ResultArchiver
                 watcher.IncludeSubdirectories = settings.IncludeSubdirectories;
                 watcher.EnableRaisingEvents = true;
 
-                GC.KeepAlive(watcher);
-
                 ConsoleWriteLine("Setuping File/Folder Change Watcher DONE", ConsoleColor.Green);
+
+                return watcher;
             }
             catch (Exception ex)
             {
                 ConsoleWriteLine("Setuping File/Folder Change Watcher ERROR: " + ex.Message, ConsoleColor.Red);
+                return new FileSystemWatcher();
             }
         }
 
