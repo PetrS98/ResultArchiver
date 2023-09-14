@@ -405,6 +405,8 @@ namespace ResultArchiver
                 watcher.IncludeSubdirectories = settings.IncludeSubdirectories;
                 watcher.EnableRaisingEvents = true;
 
+                GC.KeepAlive(watcher);
+
                 ConsoleWriteLine("Setuping File/Folder Change Watcher DONE", ConsoleColor.Green);
             }
             catch (Exception ex)
