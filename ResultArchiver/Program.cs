@@ -9,7 +9,7 @@ namespace ResultArchiver
 {
     internal class Program
     {
-        private static FileSystemWatcher _watcher;
+        private static FileSystemWatcher? _watcher;
         private static SettingsJDO _settings { get; set; } = new SettingsJDO();
 
         private static ILogger Logger = new LoggerConfiguration()
