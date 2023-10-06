@@ -143,13 +143,12 @@ namespace ResultArchiver
                 ConsoleWriteLine("Getting new file size.", ConsoleColor.Blue);
 
                 long fileSize = GetFileSize(filePath);
-                long minFreeSpaceSize = fileSize + 5368709120;
 
                 ConsoleWriteLine("New file size is: " + SizeSuffix(fileSize, 2), ConsoleColor.Green);
-                ConsoleWriteLine("Min free space on drive is: " + SizeSuffix(minFreeSpaceSize, 2), ConsoleColor.Green);
+                ConsoleWriteLine("Min free space on drive is: " + SizeSuffix(Constants.MIN_FREE_SPACE_ON_DRIVE, 2), ConsoleColor.Green);
                 ConsoleWriteLine("Checking if free space is sufficient for new file.", ConsoleColor.Blue);
 
-                if (driveFreeSpace >= minFreeSpaceSize) 
+                if (driveFreeSpace >= Constants.MIN_FREE_SPACE_ON_DRIVE) 
                 {
                     ConsoleWriteLine("Free space is sufficient for new file.", ConsoleColor.Green);
                     return true;

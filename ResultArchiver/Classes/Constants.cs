@@ -12,7 +12,7 @@ namespace ResultArchiver.Classes
         
         public readonly static string ABOUT_APP_TABLE = "                                                                          \r\n"
                                                       + "+-----------------------------------+------------------------------------+\r\n" 
-                                                      + "|        APPLICATION VERSION:       |               V 1.0.0              |\r\n"
+                                                      + "|        APPLICATION VERSION:       |               V 1.0.3              |\r\n"
                                                       + "+-----------------------------------+------------------------------------+\r\n"
                                                       + "|               This application only for Nexen Tire Czech.              |\r\n"
                                                       + "+-----------------------------------+------------------------------------+\r\n"
@@ -30,5 +30,7 @@ namespace ResultArchiver.Classes
         public static readonly string LOG_PATH = "logs/Log.txt";
 
         public static readonly string[] SIZE_SUFFIXIES = { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
+
+        public static readonly long MIN_FREE_SPACE_ON_DRIVE = 5368709120; // In bytes
     }
 }

@@ -7,6 +7,7 @@ namespace ResultArchiver.Settings
         public string DestinationPath { get; set; } = "";
         public List<string> FileIgnoreFilter { get; set; } = new List<string>();
         public bool DeleteResultAfterArchivate { get; set; } = false;
+        public bool DeleteOldestResultIfNoFreeSpaceOnDrive { get; set; } = true;
         public int MaxAmountOfArchiveFileInFolder { get; set; } = 500;
         public bool EnableLoging { get; set; } = false;
         public CompressionLevel CompressionLevel { get; set; } = 0;
