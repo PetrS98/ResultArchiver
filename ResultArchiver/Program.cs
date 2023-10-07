@@ -83,26 +83,45 @@ namespace ResultArchiver
 
             Thread.Sleep(1000);
 
-            if (CheckIfDriveFreeSpaceForFileIsOK(_settings, e.FullPath))
+            if (CheckIfDriveFreeSpaceOK(_settings, e.FullPath))
             {
-                if (File.Exists(destinationPath))
+                ArchiveIfNotExist(destinationPath, e);
+            }
+            else
+            {
+                if (_settings.DeleteOldestAndNonResultIfNoFreeSpaceOnDrive)
                 {
-                    ConsoleWriteLine("Archive file already exist. Path: " + destinationPath, ConsoleColor.DarkYellow);
-                    ConsoleWriteLine("Archiving file is skipped.", ConsoleColor.DarkYellow);
+                    DeleteNonResultData(_settings);
 
-                    if (_settings.DeleteResultAfterArchivate)
+                    while (CheckIfDriveFreeSpaceOK(_settings, e.FullPath) == false)
                     {
-                        DeleteFile(e.FullPath);
+                        File.Delete(GetOldestFileFromDirectory(".zip", _settings.DestinationPath));
                     }
+
+                    ArchiveIfNotExist(destinationPath, e);
                 }
-                else
-                {
-                    bool archiveFileError = ArchiveFile(e, destinationPath, _settings.CompressionLevel);
+            }
+        }
 
-                    if (_settings.DeleteResultAfterArchivate && archiveFileError == false)
-                    {
-                        DeleteOriginalFileFile(e, destinationPath);
-                    }
+        private static void ArchiveIfNotExist(string destinationPath, FileSystemEventArgs e)
+        {
+            if (File.Exists(destinationPath))
+            {
+                ConsoleWriteLine("Archive file already exist. Path: " + destinationPath, ConsoleColor.DarkYellow);
+                ConsoleWriteLine("Archiving file is skipped.", ConsoleColor.DarkYellow);
+
+                if (_settings.DeleteResultAfterArchivate)
+                {
+                    DeleteFile(e.FullPath);
+                }
+            }
+            else
+            {
+                bool archiveFileError = ArchiveFile(e, destinationPath, _settings.CompressionLevel);
+
+                if (_settings.DeleteResultAfterArchivate && archiveFileError == false)
+                {
+                    DeleteOriginalFileFile(e, destinationPath);
                 }
             }
         }
@@ -123,7 +142,42 @@ namespace ResultArchiver
             }
         }
 
-        private static bool CheckIfDriveFreeSpaceForFileIsOK(SettingsJDO settings, string filePath)
+        private static void DeleteNonResultData(SettingsJDO settings)
+        {
+            ConsoleWriteLine("", default, false);
+            ConsoleWriteLine("Deleting all directories, non .zip files and .zip files bigger then " + SizeSuffix(Constants.MAX_SIZE_OF_ARCHIVE_FILE, 2), ConsoleColor.Blue);
+
+            string[] allFile = GetAllFile(settings.DestinationPath);
+            string[] allSubDirectories = GetAllSubDirectories(settings.DestinationPath);
+
+            foreach (string subDirectory in allSubDirectories)
+            {
+                Directory.Delete(subDirectory);
+            }
+
+            foreach (string file in allFile)
+            {
+                if (File.Exists(file))
+                {
+                    if (Path.GetExtension(file) == ".zip")
+                    {
+                        FileInfo fileInfo = new(file);
+                        if (fileInfo.Length > Constants.MAX_SIZE_OF_ARCHIVE_FILE)
+                        {
+                            DeleteFile(file);
+                        }
+                    }
+                    else
+                    {
+                        DeleteFile(file);
+                    }
+                }
+            }
+
+            ConsoleWriteLine("Deleting DONE.", ConsoleColor.Blue);
+        }
+
+        private static bool CheckIfDriveFreeSpaceOK(SettingsJDO settings, string filePath)
         {
             long driveFreeSpace = 0;
 
@@ -256,6 +310,16 @@ namespace ResultArchiver
             {
                 return 0;
             }
+        }
+
+        private static string[] GetAllFile(string path)
+        {
+            return Directory.GetFiles(path);
+        }
+
+        private static string[] GetAllSubDirectories(string path)
+        {
+            return Directory.GetDirectories(path);
         }
 
         private static string GetOldestFileFromDirectory(string extension, string path)
